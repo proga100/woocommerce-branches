@@ -3,8 +3,9 @@
 
 class parent_branch_user
 {
-	public function __constructor()
+	public function __construct()
 	{
+
 		add_action('init', [$this, 'run_init']);
 	}
 
@@ -12,7 +13,7 @@ class parent_branch_user
 	{
 		add_action('show_user_profile', [$this, 'my_user_profile_edit_action']);
 		add_action('edit_user_profile', [$this, 'my_user_profile_edit_action']);
-		exit;
+		
 	}
 
 	function my_user_profile_edit_action($user)

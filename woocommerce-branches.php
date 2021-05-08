@@ -30,6 +30,6 @@ if ( ! is_woocommerce_active() ) {
 	return;
 }
 
-require_once FLANCE_BRANCHES_FILE . '/inc/autoload.php';
+require_once FLANCE_BRANCHES_PATH. '/inc/autoload.php';
 
 
