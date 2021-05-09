@@ -1,3 +1,12 @@
 ul.wc_payment_methods.payment_methods.methods {
     display: none;
 }
+
+.hide_shipping_check {
+    display: none;
+}
+
+.input_disable input, .input_disable .select2-selection.select2-selection--single {
+    pointer-events: none;
+    background: #F5F5F5 !important;
+}
