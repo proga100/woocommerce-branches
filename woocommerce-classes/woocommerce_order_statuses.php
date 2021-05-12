@@ -13,9 +13,45 @@ class woocommerce_order_statuses
 	{
 		add_filter('woocommerce_bacs_process_payment_order_status', [$this, 'process_payment_order_status'], 10, 2);
 		add_filter('woocommerce_cheque_process_payment_order_status', [$this, 'process_payment_order_status'], 10, 2);
-
+		add_filter('woocommerce_email_classes', [$this, 'woocommerce_email_classes']);
 		//add_filter('woocommerce_defer_transactional_emails', [$this, 'woocommerce_defer_transactional_emails']);
 		add_action('woocommerce_order_status_ordered', [$this, 'ordered_status_custom_notification'], 20, 2);
+		//apply_filters( $this->get_hook_prefix() . $address . '_' . $prop, $value, $this );
+	}
+
+	public static function set_parent_id()
+	{
+		if (is_user_logged_in()) {
+			$user_id = get_current_user_id();
+			return $parent_user_id = get_user_meta($user_id, 'parent_customer_id', true);
+		} else {
+			return null;
+		}
+	}
+
+	public static function get_value($user_id, $input)
+	{
+		$customer_object = false;
+
+		$customer_object = new WC_Customer($user_id, true);
+
+		if (is_callable(array($customer_object, "get_$input"))) {
+			$value = $customer_object->{"get_$input"}();
+		} elseif ($customer_object->meta_exists($input)) {
+			$value = $customer_object->get_meta($input, true);
+		}
+
+		if ('' === $value) {
+			$value = null;
+		}
+		return $value;
+	}
+
+	public function woocommerce_email_classes($email_classes)
+	{
+		$email_classes['WC_Email_Customer_Ordered_Child'] = include_once FLANCE_BRANCHES_PATH . '/woocommerce-classes/email_classes/class-wc-email-customer-ordered.php';
+
+		return $email_classes;
 	}
 
 	public function process_payment_order_status($status, $order)
@@ -32,22 +68,20 @@ class woocommerce_order_statuses
 	function ordered_status_custom_notification($order_id, $order)
 	{
 		// HERE below your settings
-		$heading = __('Your Awaiting delivery order', 'woocommerce');
-		$subject = '[{site_title}] Awaiting delivery order ({order_number}) - {order_date}';
+		//$heading = __('Your Awaiting delivery order', 'woocommerce');
+		//$subject = '[{site_title}] Awaiting delivery order ({order_number}) - {order_date}';
 
 		// Getting all WC_emails objects
 		$mailer = WC()->mailer()->get_emails();
 
 		// Customizing Heading and subject In the WC_email processing Order object
-		$mailer['WC_Email_Customer_Processing_Order']->heading = $heading;
-		$mailer['WC_Email_Customer_Processing_Order']->subject = $subject;
+		//$mailer['WC_Email_Customer_Processing_Order']->heading = $heading;
+		//$mailer['WC_Email_Customer_Processing_Order']->subject = $subject;
 
 		// Sending the customized email
-		$mailer['WC_Email_Customer_Processing_Order']->trigger($order_id);
+		$mailer['WC_Email_Customer_Ordered_Child']->trigger($order_id);
 	}
 }
-
-new woocommerce_order_statuses();
 
 class woocommerce_order_statuses_new
 {

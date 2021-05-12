@@ -41,22 +41,22 @@ class wc_checkout_child
 
 		$input_check_for_billing = explode('_', $input);
 		if ($this->parent_user_id && in_array('billing', $input_check_for_billing)) {
-			$value = $this->get_value($this->parent_user_id, $input);
+			$value = self::get_value($this->parent_user_id, $input);
 		}
 		return $value;
 	}
 
-	public function get_value($user_id, $input)
+	public static function get_value($user_id, $input)
 	{
-
+		global $wc_checkout_child;
 		$customer_object = false;
 
 		if (is_user_logged_in()) {
 			// Load customer object, but keep it cached to avoid reloading it multiple times.
-			if (is_null($this->logged_in_customer)) {
-				$this->logged_in_customer = new WC_Customer($user_id, true);
+			if (is_null($wc_checkout_child->logged_in_customer)) {
+				$wc_checkout_child->logged_in_customer = new WC_Customer($user_id, true);
 			}
-			$customer_object = $this->logged_in_customer;
+			$customer_object = $wc_checkout_child->logged_in_customer;
 		}
 
 		if (is_callable(array($customer_object, "get_$input"))) {
@@ -72,4 +72,4 @@ class wc_checkout_child
 	}
 }
 
-new wc_checkout_child();
+$wc_checkout_child = new wc_checkout_child();
