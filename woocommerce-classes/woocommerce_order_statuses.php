@@ -16,7 +16,6 @@ class woocommerce_order_statuses
 		add_filter('woocommerce_cheque_process_payment_order_status', [$this, 'process_payment_order_status'], 10, 2);
 		add_filter('woocommerce_email_classes', [$this, 'woocommerce_email_classes']);
 		//add_filter('woocommerce_defer_transactional_emails', [$this, 'woocommerce_defer_transactional_emails']);
-		add_action('woocommerce_order_status_ordered', [$this, 'ordered_status_custom_notification'], 20, 2);
 		//apply_filters( $this->get_hook_prefix() . $address . '_' . $prop, $value, $this );
 		add_filter('wc_order_statuses', [$this, 'so_39252649_remove_processing_status'], 1000000);
 	}
@@ -58,8 +57,17 @@ class woocommerce_order_statuses
 
 	public function woocommerce_email_classes($email_classes)
 	{
-		$email_classes['WC_Email_Customer_Ordered_Child'] = include_once FLANCE_BRANCHES_PATH . '/woocommerce-classes/email_classes/class-wc-email-customer-ordered.php';
+		$email_classes_add =[
+			'WC_Email_Customer_Dispatched_Child' =>'class-wc-email-customer-dispatched.php',
+			'WC_Email_Customer_Ordered_Child' => 'class-wc-email-customer-ordered.php',
+			'WC_Email_Customer_Processing_Child' => 'class-wc-email-customer-processing.php',
+			'WC_Email_Customer_Invoice_Child' => 'class-wc-email-customer-invoice.php'
+		];
+		foreach ($email_classes_add as $key=>$email_class_file){
+			$email_classes[$key] = include_once FLANCE_BRANCHES_PATH . "/woocommerce-classes/email_classes/$email_class_file";
+		}
 
+		array_merge($email_classes_add,$email_classes );
 		return $email_classes;
 	}
 

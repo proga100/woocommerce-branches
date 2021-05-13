@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 	exit; // Exit if accessed directly.
 }
 require_once FLANCE_BRANCHES_PATH . '/woocommerce-classes/woocommerce_order_statuses.php';
-if (!class_exists('WC_Email_Customer_Ordered_Child', false)) :
+if (!class_exists('WC_Email_Customer_Processing_Child', false)) :
 
 	/**
 	 * Customer Processing Order Email.
@@ -21,7 +21,7 @@ if (!class_exists('WC_Email_Customer_Ordered_Child', false)) :
 	 * @package     WooCommerce\Classes\Emails
 	 * @extends     WC_Email
 	 */
-	class WC_Email_Customer_Ordered_Child extends WC_Email
+	class WC_Email_Customer_Processing_Child extends WC_Email
 	{
 
 		/**
@@ -29,20 +29,22 @@ if (!class_exists('WC_Email_Customer_Ordered_Child', false)) :
 		 */
 		public function __construct()
 		{
-			$this->id = 'customer_ordered_child';
+			$this->id = 'customer_processing_child';
 			$this->customer_email = true;
 
-			$this->title = __('Ordered ', 'woocommerce');
-			$this->description = __('This is an order notification sent to customers containing order details after payment.', 'woocommerce');
-			$this->template_html = 'emails/customer-ordered-child.php';
-			$this->template_plain = 'emails/plain/customer-ordered-child.php';
+			$this->title = __('Processing ',  'woocommerce-branches');
+			$this->description = __('This is an order notification sent to customers containing order details after payment.',  'woocommerce-branches');
+			$this->template_html = 'emails/customer-processing-child.php';
+			$this->template_plain = 'emails/plain/customer-processing-child.php';
 			$this->placeholders = array(
 				'{order_date}' => '',
 				'{order_number}' => '',
 			);
-			add_action('woocommerce_order_status_ordered', [$this, 'trigger'], 20, 2);
+
 			// Triggers for this email.
-			//add_action('woocommerce_order_status_cancelled_to_processing_notification', array($this, 'trigger'), 10, 2);
+			//add_action('woocommerce_order_status_processing_to_dispatched_notification', array($this, 'trigger'), 10, 2);
+
+			add_action('woocommerce_order_status_processing', array($this, 'trigger'), 20, 2);
 			//add_action('woocommerce_order_status_failed_to_processing_notification', array($this, 'trigger'), 10, 2);
 			//add_action('woocommerce_order_status_on-hold_to_processing_notification', array($this, 'trigger'), 10, 2);
 			//add_action('woocommerce_order_status_pending_to_processing_notification', array($this, 'trigger'), 10, 2);
@@ -59,7 +61,7 @@ if (!class_exists('WC_Email_Customer_Ordered_Child', false)) :
 		 */
 		public function get_default_subject()
 		{
-			return __('Your {site_title} order has been received!', 'woocommerce');
+			return __('Your {site_title} order is being processing!', 'woocommerce-branches');
 		}
 
 		/**
@@ -70,7 +72,7 @@ if (!class_exists('WC_Email_Customer_Ordered_Child', false)) :
 		 */
 		public function get_default_heading()
 		{
-			return __('Thank you for your order', 'woocommerce');
+			return __('Your {site_title} order is being processing!',  'woocommerce-branches');
 		}
 
 		/**
@@ -82,7 +84,7 @@ if (!class_exists('WC_Email_Customer_Ordered_Child', false)) :
 		public function trigger($order_id, $order = false)
 		{
 			$this->setup_locale();
-
+//echo 'dispatched'; exit;
 			if ($order_id && !is_a($order, 'WC_Order')) {
 				$order = wc_get_order($order_id);
 			}
@@ -160,10 +162,10 @@ if (!class_exists('WC_Email_Customer_Ordered_Child', false)) :
 		 */
 		public function get_default_additional_content()
 		{
-			return __('Thanks for using {site_url}!', 'woocommerce');
+			return __('Thanks for using {site_url}!',  'woocommerce-branches');
 		}
 	}
 
 endif;
 
-return new WC_Email_Customer_Ordered_Child();
+return new WC_Email_Customer_Processing_Child();
