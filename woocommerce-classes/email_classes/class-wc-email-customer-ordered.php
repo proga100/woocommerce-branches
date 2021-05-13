@@ -34,8 +34,8 @@ if (!class_exists('WC_Email_Customer_Ordered_Child', false)) :
 
 			$this->title = __('Processing order', 'woocommerce');
 			$this->description = __('This is an order notification sent to customers containing order details after payment.', 'woocommerce');
-			$this->template_html = 'emails/customer-processing-order.php';
-			$this->template_plain = 'emails/plain/customer-processing-order.php';
+			$this->template_html = 'emails/customer-ordered-child.php';
+			$this->template_plain = 'emails/plain/customer-ordered-child.php';
 			$this->placeholders = array(
 				'{order_date}' => '',
 				'{order_number}' => '',

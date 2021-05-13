@@ -7,6 +7,7 @@ class woocommerce_order_statuses
 	{
 		add_action('init', [$this, 'init_template']);
 
+
 	}
 
 	public function init_template()
@@ -17,6 +18,14 @@ class woocommerce_order_statuses
 		//add_filter('woocommerce_defer_transactional_emails', [$this, 'woocommerce_defer_transactional_emails']);
 		add_action('woocommerce_order_status_ordered', [$this, 'ordered_status_custom_notification'], 20, 2);
 		//apply_filters( $this->get_hook_prefix() . $address . '_' . $prop, $value, $this );
+		add_filter('wc_order_statuses', [$this, 'so_39252649_remove_processing_status'], 1000000);
+	}
+
+	public function so_39252649_remove_processing_status($statuses)
+	{
+		$rem_stat = ['wc-pending' => 0, 'wc-cancelled' => 1, 'wc-on-hold' => 3, 'wc-failed' => 5, 'wc-checkout-draft' => 6];
+		$statuses = array_diff_key($statuses, $rem_stat);
+		return $statuses;
 	}
 
 	public static function set_parent_id()
