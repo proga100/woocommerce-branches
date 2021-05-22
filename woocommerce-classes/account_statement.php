@@ -56,6 +56,12 @@ class AccountStatement extends Controller
 		$this->locate_template('user_account_statement');
 	}
 
+	public function get_total_order($user_id)
+	{
+		$orders = get_orders_list($user_id);
+		return get_order_total($orders);
+	}
+
 	public function locate_template($file)
 	{
 		$request = [];
@@ -68,21 +74,12 @@ class AccountStatement extends Controller
 	{
 
 		$current_page = (!empty($_GET['paged'])) ? $_GET['paged'] : 1;
-		$users_per_page = get_option('posts_per_page');
-
-
+		$users_per_page = (!empty($_GET['posts_per_page']))? $_GET['posts_per_page']: get_option('posts_per_page');
 		$this->request = array(
 			'role' => 'customer',
 			'order' => 'ASC',
 			'number' => $users_per_page,
-			'paged' => $current_page,
-			'meta_query' => array(
-				array(
-					'key' => '_order_count',
-					'value' => 0,
-					'compare' => '>'
-				)
-			)
+			'paged' => $current_page
 		);
 	}
 
