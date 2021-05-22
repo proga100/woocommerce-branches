@@ -56,13 +56,12 @@ class AccountStatement extends Controller
 		$this->locate_template('user_account_statement');
 	}
 
-
 	public function locate_template($file)
 	{
 		$request = [];
 		$this->get_request();
 		$customers = $this->get_items($request);
-		require_once FLANCE_BRANCHES_PATH . "/template/woocommerce/admin/$file.php";
+		include_once FLANCE_BRANCHES_PATH . "/template/woocommerce/admin/$file.php";
 	}
 
 	public function get_request()

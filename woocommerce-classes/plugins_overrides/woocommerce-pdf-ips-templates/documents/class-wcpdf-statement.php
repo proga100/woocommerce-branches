@@ -6,6 +6,9 @@ use WPO\WC\PDF_Invoices\Compatibility\WC_Core as WCX;
 use WPO\WC\PDF_Invoices\Compatibility\Order as WCX_Order;
 use WPO\WC\PDF_Invoices\Compatibility\Product as WCX_Product;
 
+require_once FLANCE_BRANCHES_PATH . '/woocommerce-classes/order_data.php';
+require_once FLANCE_BRANCHES_PATH . '/woocommerce-classes/countries.php';
+
 
 if (!defined('ABSPATH')) {
 	exit; // Exit if accessed directly
@@ -81,6 +84,7 @@ if (!class_exists('\\WPO\\WC\\PDF_Invoices\\Documents\\Statement')) :
 			$filename = apply_filters('wpo_wcpdf_filename', $filename, $this->get_type(), $order_ids, $context);
 
 			// sanitize filename (after filters to prevent human errors)!
+
 			return sanitize_file_name($filename);
 		}
 
@@ -91,24 +95,24 @@ if (!class_exists('\\WPO\\WC\\PDF_Invoices\\Documents\\Statement')) :
 			ob_start();
 			if (file_exists($css)) {
 				extract(wpo_wcpdf_templates_get_footer_settings($this, '2cm')); // $footer_height & $page_bottom
-                ?>
+				?>
                 @page {
-                    margin-top: 1cm;
-                    margin-bottom: <?php echo $page_bottom; ?>;
-                    margin-left: 2cm;
-                    margin-right: 2cm;
+                margin-top: 1cm;
+                margin-bottom: <?php echo $page_bottom; ?>;
+                margin-left: 2cm;
+                margin-right: 2cm;
                 }
 
                 #footer {
-                    position: absolute;
-                    bottom: -<?php echo $footer_height; ?>;
-                    left: 0;
-                    right: 0;
-                    height: <?php echo $footer_height; ?>;
-                    text-align: center;
-                    border-top: 0.1mm solid gray;
-                    margin-bottom: 0;
-                    padding-top: 2mm;
+                position: absolute;
+                bottom: -<?php echo $footer_height; ?>;
+                left: 0;
+                right: 0;
+                height: <?php echo $footer_height; ?>;
+                text-align: center;
+                border-top: 0.1mm solid gray;
+                margin-bottom: 0;
+                padding-top: 2mm;
                 }
 				<?php
 				include($css);
@@ -119,8 +123,35 @@ if (!class_exists('\\WPO\\WC\\PDF_Invoices\\Documents\\Statement')) :
 			echo $css;
 		}
 
-	}
+		public function get_orders_list()
+		{
+			$user_id = ($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+			return get_orders_list($user_id);
+		}
 
+		public function get_user_data()
+		{
+			$user_id = ($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+			$customer = [];
+			global $countries;
+			if ($user_id > 0) {
+				$customer['billing_first_name'] = get_user_meta($user_id, 'billing_first_name', true);
+				$customer['billing_last_name'] = get_user_meta($user_id, 'billing_last_name', true);
+				$customer['billing_address_1'] = get_user_meta($user_id, 'billing_address_1', true);
+				$customer['billing_address_2'] = get_user_meta($user_id, 'billing_address_2', true);
+				$customer['billing_city'] = get_user_meta($user_id, 'billing_city', true);
+				$customer['billing_state'] = get_user_meta($user_id, 'billing_state', true);
+				$country = get_user_meta($user_id, 'billing_country', true);
+				$customer['billing_country'] =(!empty($countries[$country]))?$countries[$country]:$country ;
+				$customer['billing_postcode'] = get_user_meta($user_id, 'billing_postcode', true);
+				$customer['billing_email'] = get_user_meta($user_id, 'billing_email', true);
+				$customer['billing_phone'] = get_user_meta($user_id, 'billing_phone', true);
+				$customer['billing_company'] = get_user_meta($user_id, 'billing_company', true);
+				return $customer;
+			}
+		}
+
+	}
 endif; // class_exists
 
 return new Statement();

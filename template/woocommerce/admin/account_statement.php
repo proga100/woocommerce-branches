@@ -1,4 +1,5 @@
-<?php if (! empty($customers)) : ?>
+<?php if (! empty($customers)) :
+    ?>
 
      <table class="table">
 
@@ -6,8 +7,7 @@
                     <tr>
                          <th data-sort="string">Name</th>
                          <th data-sort="string">Email</th>
-                         <th data-sort="float">Total spent (<?php echo get_option('woocommerce_currency'); ?>)</th>
-
+                         <th data-sort="float">Total Current Overdue</th>
                         <th data-sort="string">Account  Statement</th>
                     </tr>
           </thead>
