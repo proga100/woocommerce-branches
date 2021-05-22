@@ -7,7 +7,6 @@ use WPO\WC\PDF_Invoices\Compatibility\Order as WCX_Order;
 use WPO\WC\PDF_Invoices\Compatibility\Product as WCX_Product;
 
 
-
 if (!defined('ABSPATH')) {
 	exit; // Exit if accessed directly
 }
@@ -34,7 +33,7 @@ if (!class_exists('\\WPO\\WC\\PDF_Invoices\\Documents\\Statement')) :
 		{
 			// set properties
 			$this->type = 'statement';
-			$this->title = __('Account Statement', 'woocommerce-pdf-invoices-packing-slips');
+			$this->title = __('Statement of Account', 'woocommerce-pdf-invoices-packing-slips');
 			$this->icon = WPO_WCPDF()->plugin_url() . "/assets/images/invoice.svg";
 			add_filter('wpo_wcpdf_document_is_allowed', array($this, 'enable_statement'), 10, 2);
 			// Call parent constructor
@@ -51,7 +50,7 @@ if (!class_exists('\\WPO\\WC\\PDF_Invoices\\Documents\\Statement')) :
 		public function get_title()
 		{
 			// override/not using $this->title to allow for language switching!
-			return apply_filters("wpo_wcpdf_{$this->slug}_title", __('Account Statement', 'woocommerce-pdf-invoices-packing-slips'), $this);
+			return apply_filters("wpo_wcpdf_{$this->slug}_title", __('Statement of Account', 'woocommerce-pdf-invoices-packing-slips'), $this);
 		}
 
 		public function get_filename($context = 'download', $args = array())
@@ -83,6 +82,41 @@ if (!class_exists('\\WPO\\WC\\PDF_Invoices\\Documents\\Statement')) :
 
 			// sanitize filename (after filters to prevent human errors)!
 			return sanitize_file_name($filename);
+		}
+
+		public function template_styles()
+		{
+			$css = apply_filters('wpo_wcpdf_template_styles_file', $this->locate_template_file("style.css"));
+
+			ob_start();
+			if (file_exists($css)) {
+				extract(wpo_wcpdf_templates_get_footer_settings($this, '2cm')); // $footer_height & $page_bottom
+                ?>
+                @page {
+                    margin-top: 1cm;
+                    margin-bottom: <?php echo $page_bottom; ?>;
+                    margin-left: 2cm;
+                    margin-right: 2cm;
+                }
+
+                #footer {
+                    position: absolute;
+                    bottom: -<?php echo $footer_height; ?>;
+                    left: 0;
+                    right: 0;
+                    height: <?php echo $footer_height; ?>;
+                    text-align: center;
+                    border-top: 0.1mm solid gray;
+                    margin-bottom: 0;
+                    padding-top: 2mm;
+                }
+				<?php
+				include($css);
+			}
+			$css = ob_get_clean();
+			$css = apply_filters('wpo_wcpdf_template_styles', $css, $this);
+
+			echo $css;
 		}
 
 	}
