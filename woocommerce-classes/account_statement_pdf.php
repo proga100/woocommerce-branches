@@ -11,43 +11,62 @@ class account_statement_pdf
 		add_action('wp_ajax_generate_wpo_wcpdf', array($this, 'generate_pdf_ajax'));
 		add_action('wp_ajax_nopriv_generate_wpo_wcpdf', array($this, 'generate_pdf_ajax'));
 		//add_filter( 'woocommerce_email_attachments', array( $this, 'attach_pdf_to_email' ), 99, 4 );
+		add_filter('wpo_wcpdf_meta_box_actions', [$this, 'wpo_wcpdf_meta_box_actions'], 10, 2);
 	}
-	public function attach_pdf_to_email ( $attachments, $email_id, $order, $email = null ) {
+
+
+	public function wpo_wcpdf_meta_box_actions($meta_box_actions, $post_id)
+	{
+		$order = wc_get_order($post_id);
+		$meta_box_actions_modified = [];
+		$parent_id = (get_post_meta($post_id, 'parent_id', true)) ? get_post_meta($post_id, 'parent_id', true) : $order->get_user_id();
+		foreach ($meta_box_actions as $document_type => $data) {
+			if ($document_type != 'statement') {
+			//	$data['url'] = wp_nonce_url(admin_url("admin-ajax.php?action=generate_wpo_wcpdf&document_type={$document_type}&user_id=" . $parent_id), 'generate_wpo_wcpdf');
+			$meta_box_actions_modified[$document_type] = $data;
+			}
+
+		}
+		return $meta_box_actions_modified;
+	}
+
+	public function attach_pdf_to_email($attachments, $email_id, $order, $email = null)
+	{
 		// check if all variables properly set
-		if ( !is_object( $order ) || !isset( $email_id ) ) {
+		if (!is_object($order) || !isset($email_id)) {
 			return $attachments;
 		}
 
 		// Skip User emails
-		if ( get_class( $order ) == 'WP_User' ) {
+		if (get_class($order) == 'WP_User') {
 			return $attachments;
 		}
 
-		$order_id = WCX_Order::get_id( $order );
+		$order_id = WCX_Order::get_id($order);
 
-		if ( ! ( $order instanceof \WC_Order || is_subclass_of( $order, '\WC_Abstract_Order') ) && $order_id == false ) {
+		if (!($order instanceof \WC_Order || is_subclass_of($order, '\WC_Abstract_Order')) && $order_id == false) {
 			return $attachments;
 		}
 
 		// WooCommerce Booking compatibility
-		if ( get_post_type( $order_id ) == 'wc_booking' && isset($order->order) ) {
+		if (get_post_type($order_id) == 'wc_booking' && isset($order->order)) {
 			// $order is actually a WC_Booking object!
 			$order = $order->order;
-			$order_id = WCX_Order::get_id( $order );
+			$order_id = WCX_Order::get_id($order);
 		}
 
 		// do not process low stock notifications, user emails etc!
-		if ( in_array( $email_id, array( 'no_stock', 'low_stock', 'backorder', 'customer_new_account', 'customer_reset_password' ) ) ) {
+		if (in_array($email_id, array('no_stock', 'low_stock', 'backorder', 'customer_new_account', 'customer_reset_password'))) {
 			return $attachments;
 		}
 
 		// final check on order object
-		if ( ! ( $order instanceof \WC_Order || is_subclass_of( $order, '\WC_Abstract_Order') ) ) {
+		if (!($order instanceof \WC_Order || is_subclass_of($order, '\WC_Abstract_Order'))) {
 			return $attachments;
 		}
 
 		$tmp_path = $this->get_tmp_path('attachments');
-		if ( ! @is_dir( $tmp_path ) || ! wp_is_writable( $tmp_path ) ) {
+		if (!@is_dir($tmp_path) || !wp_is_writable($tmp_path)) {
 			return $attachments;
 		}
 
@@ -55,48 +74,48 @@ class account_statement_pdf
 		// array_map('unlink', ( glob( $tmp_path.'*.pdf' ) ? glob( $tmp_path.'*.pdf' ) : array() ) );
 
 		// disable deprecation notices during email sending
-		add_filter( 'wcpdf_disable_deprecation_notices', '__return_true' );
+		add_filter('wcpdf_disable_deprecation_notices', '__return_true');
 
 		// reload translations because WC may have switched to site locale (by setting the plugin_locale filter to site locale in wc_switch_to_site_locale())
-		if ( apply_filters( 'wpo_wcpdf_allow_reload_attachment_translations', true ) ) {
+		if (apply_filters('wpo_wcpdf_allow_reload_attachment_translations', true)) {
 			WPO_WCPDF()->translations();
-			do_action( 'wpo_wcpdf_reload_attachment_translations' );
+			do_action('wpo_wcpdf_reload_attachment_translations');
 		}
 
-		$attach_to_document_types = $this->get_documents_for_email( $email_id, $order );
-		foreach ( $attach_to_document_types as $document_type ) {
-			$email_order    = apply_filters( 'wpo_wcpdf_email_attachment_order', $order, $email, $document_type );
-			$email_order_id = WCX_Order::get_id( $email_order );
+		$attach_to_document_types = $this->get_documents_for_email($email_id, $order);
+		foreach ($attach_to_document_types as $document_type) {
+			$email_order = apply_filters('wpo_wcpdf_email_attachment_order', $order, $email, $document_type);
+			$email_order_id = WCX_Order::get_id($email_order);
 
-			do_action( 'wpo_wcpdf_before_attachment_creation', $email_order, $email_id, $document_type );
+			do_action('wpo_wcpdf_before_attachment_creation', $email_order, $email_id, $document_type);
 
 			try {
 				// prepare document
 				// we use ID to force to reloading the order to make sure that all meta data is up to date.
 				// this is especially important when multiple emails with the PDF document are sent in the same session
-				$document = wcpdf_get_document( $document_type, (array) $email_order_id, true );
-				if ( !$document ) { // something went wrong, continue trying with other documents
+				$document = wcpdf_get_document($document_type, (array)$email_order_id, true);
+				if (!$document) { // something went wrong, continue trying with other documents
 					continue;
 				}
 				$filename = $document->get_filename();
 				$pdf_path = $tmp_path . $filename;
 
-				$lock_file = apply_filters( 'wpo_wcpdf_lock_attachment_file', true );
+				$lock_file = apply_filters('wpo_wcpdf_lock_attachment_file', true);
 
 				// if this file already exists in the temp path, we'll reuse it if it's not older than 60 seconds
-				$max_reuse_age = apply_filters( 'wpo_wcpdf_reuse_attachment_age', 60 );
-				if ( file_exists($pdf_path) && $max_reuse_age > 0 ) {
+				$max_reuse_age = apply_filters('wpo_wcpdf_reuse_attachment_age', 60);
+				if (file_exists($pdf_path) && $max_reuse_age > 0) {
 					// get last modification date
 					if ($filemtime = filemtime($pdf_path)) {
 						$time_difference = time() - $filemtime;
-						if ( $time_difference < $max_reuse_age ) {
+						if ($time_difference < $max_reuse_age) {
 							// check if file is still being written to
-							if ( $lock_file && $this->wait_for_file_lock( $pdf_path ) === false ) {
+							if ($lock_file && $this->wait_for_file_lock($pdf_path) === false) {
 								$attachments[] = $pdf_path;
 								continue;
 							} else {
 								// make sure this gets logged, but don't abort process
-								wcpdf_log_error( "Attachment file locked (reusing: {$pdf_path})", 'critical' );
+								wcpdf_log_error("Attachment file locked (reusing: {$pdf_path})", 'critical');
 							}
 						}
 					}
@@ -105,33 +124,33 @@ class account_statement_pdf
 				// get pdf data & store
 				$pdf_data = $document->get_pdf();
 
-				if ( $lock_file ) {
-					file_put_contents ( $pdf_path, $pdf_data, LOCK_EX );
+				if ($lock_file) {
+					file_put_contents($pdf_path, $pdf_data, LOCK_EX);
 				} else {
-					file_put_contents ( $pdf_path, $pdf_data );
+					file_put_contents($pdf_path, $pdf_data);
 				}
 
 				// wait for file lock
-				if ( $lock_file && $this->wait_for_file_lock( $pdf_path ) === true ) {
-					wcpdf_log_error( "Attachment file locked ({$pdf_path})", 'critical' );
+				if ($lock_file && $this->wait_for_file_lock($pdf_path) === true) {
+					wcpdf_log_error("Attachment file locked ({$pdf_path})", 'critical');
 				}
 
 				$attachments[] = $pdf_path;
 
-				do_action( 'wpo_wcpdf_email_attachment', $pdf_path, $document_type, $document );
-			} catch ( \Exception $e ) {
-				wcpdf_log_error( $e->getMessage(), 'critical', $e );
+				do_action('wpo_wcpdf_email_attachment', $pdf_path, $document_type, $document);
+			} catch (\Exception $e) {
+				wcpdf_log_error($e->getMessage(), 'critical', $e);
 				continue;
-			} catch ( \Dompdf\Exception $e ) {
-				wcpdf_log_error( 'DOMPDF exception: '.$e->getMessage(), 'critical', $e );
+			} catch (\Dompdf\Exception $e) {
+				wcpdf_log_error('DOMPDF exception: ' . $e->getMessage(), 'critical', $e);
 				continue;
-			} catch ( \Error $e ) {
-				wcpdf_log_error( $e->getMessage(), 'critical', $e );
+			} catch (\Error $e) {
+				wcpdf_log_error($e->getMessage(), 'critical', $e);
 				continue;
 			}
 		}
 
-		remove_filter( 'wcpdf_disable_deprecation_notices', '__return_true' );
+		remove_filter('wcpdf_disable_deprecation_notices', '__return_true');
 
 		return $attachments;
 	}
@@ -175,7 +194,7 @@ class account_statement_pdf
 		}
 		echo $_GET['user_id'];
 
-		if (empty($_GET['order_ids'] ) && empty($_GET['user_id'])) {
+		if (empty($_GET['order_ids']) && empty($_GET['user_id'])) {
 			wp_die(__("You haven't selected any orders", 'woocommerce-pdf-invoices-packing-slips'));
 		}
 
@@ -192,7 +211,7 @@ class account_statement_pdf
 		$document_type = sanitize_text_field($_GET['document_type']);
 
 		$order_ids = (array)array_map('absint', explode('x', $_GET['order_ids']));
-
+		$user_id = (array)array_map('absint', explode('x', $_GET['user_id']));
 		// Process oldest first: reverse $order_ids array if required
 		if (count($order_ids) > 1 && end($order_ids) < reset($order_ids)) {
 			$order_ids = array_reverse($order_ids);

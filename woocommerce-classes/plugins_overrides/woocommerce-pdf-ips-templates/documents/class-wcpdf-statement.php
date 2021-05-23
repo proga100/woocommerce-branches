@@ -58,26 +58,12 @@ if (!class_exists('\\WPO\\WC\\PDF_Invoices\\Documents\\Statement')) :
 
 		public function get_filename($context = 'download', $args = array())
 		{
-			$order_count = isset($args['order_ids']) ? count($args['order_ids']) : 1;
 
-			$name = _n('statement', 'invoices', $order_count, 'woocommerce-pdf-invoices-packing-slips');
+			$user_id = isset($_GET['user_id']) ? $_GET['user_id'] : '';
+			$name = esc_html__('statement',  'woocommerce-pdf-invoices-packing-slips');
+            $suffix = date('Y-m-d'); // 2020-11-11
 
-			if ($order_count == 1) {
-				if (isset($this->settings['display_number']) && $this->settings['display_number'] == 'invoice_number') {
-					$suffix = (string)$this->get_number();
-				} else {
-					if (empty($this->order) && isset($args['order_ids'][0])) {
-						$order = WCX::get_order($args['order_ids'][0]);
-						$suffix = is_callable(array($order, 'get_order_number')) ? $order->get_order_number() : '';
-					} else {
-						$suffix = is_callable(array($this->order, 'get_order_number')) ? $this->order->get_order_number() : '';
-					}
-				}
-			} else {
-				$suffix = date('Y-m-d'); // 2020-11-11
-			}
-
-			$filename = $name . '-' . $suffix . '.pdf';
+			$filename = $name . '-user_id_' .$user_id.'-'. $suffix . '.pdf';
 
 			// Filter filename
 			$order_ids = isset($args['order_ids']) ? $args['order_ids'] : array($this->order_id);
