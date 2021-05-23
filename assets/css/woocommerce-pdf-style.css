@@ -1,3 +1,12 @@
 .statement table.head.container {
     width: 30%;
 }
+
+
+div#table_id_1_wrapper {
+    margin-top: 20px;
+}
+
+.cl-pdf{
+    text-align: center;
+}

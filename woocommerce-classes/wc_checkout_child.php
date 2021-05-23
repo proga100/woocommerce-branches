@@ -39,6 +39,7 @@ class wc_checkout_child
 	{
 		if (!$order_id || !$this->parent_user_id)
 			return;
+		add_post_meta($order_id, 'parent_id', $this->parent_user_id);
 
 		foreach ($this->billing_metas as $input) {
 			$user_id = get_current_user_id();
@@ -80,10 +81,10 @@ class wc_checkout_child
 	public static function set_backup_billing_meta($input, $value)
 	{
 		$user_id = get_current_user_id();
-			$user_billing_data = get_user_meta($user_id, $input, true);
-			//echo "$user_id $input $user_billing_data";
-			if ($user_billing_data)
-				update_user_meta($user_id, "backup_$input", $user_billing_data);
+		$user_billing_data = get_user_meta($user_id, $input, true);
+		//echo "$user_id $input $user_billing_data";
+		if ($user_billing_data)
+			update_user_meta($user_id, "backup_$input", $user_billing_data);
 	}
 
 	public static function get_value($user_id, $input)

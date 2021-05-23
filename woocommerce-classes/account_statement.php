@@ -48,6 +48,12 @@ class AccountStatement extends Controller
 
 	public function account_statement_page()
 	{
+		wp_enqueue_style('datatable_style', FLANCE_BRANCHES_URL . 'assets/datatable/jquery.dataTables.css', null, time(), 'all');
+		wp_enqueue_style('bootstrapstyle', FLANCE_BRANCHES_URL . 'assets/datatable/bootstrap.min.css');
+		wp_enqueue_style('bootstrapthemestyle', FLANCE_BRANCHES_URL . 'assets/datatable/bootstrap-theme.min.css');
+		wp_enqueue_script('bootstrap-script', FLANCE_BRANCHES_URL . 'assets/datatable/bootstrap.min.js', array(), true);
+		wp_enqueue_script('datatable_script', FLANCE_BRANCHES_URL . 'assets/datatable/jquery.dataTables.js', array('jquery'), 'all');
+
 		$this->locate_template('account_statement');
 	}
 
@@ -74,9 +80,8 @@ class AccountStatement extends Controller
 	{
 
 		$current_page = (!empty($_GET['paged'])) ? $_GET['paged'] : 1;
-		$users_per_page = (!empty($_GET['posts_per_page']))? $_GET['posts_per_page']: get_option('posts_per_page');
+		$users_per_page = (!empty($_GET['posts_per_page'])) ? $_GET['posts_per_page'] : -1;
 		$this->request = array(
-			'role' => 'customer',
 			'order' => 'ASC',
 			'number' => $users_per_page,
 			'paged' => $current_page
