@@ -10,3 +10,11 @@ div#table_id_1_wrapper {
 .cl-pdf{
     text-align: center;
 }
+
+.item-td-check input {
+    display: none;
+}
+
+#order_line_items .item-td-check input {
+    display: block;
+}

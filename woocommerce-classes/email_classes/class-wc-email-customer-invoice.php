@@ -32,8 +32,8 @@ if (!class_exists('WC_Email_Customer_Invoice_Child', false)) :
 			$this->id = 'customer_invoice_child';
 			$this->customer_email = true;
 
-			$this->title = __('Invoiced ',  'woocommerce-branches');
-			$this->description = __('This is an order notification sent to customers containing order details after payment.',  'woocommerce-branches');
+			$this->title = __('Invoiced ', 'woocommerce-branches');
+			$this->description = __('This is an order notification sent to customers containing order details after payment.', 'woocommerce-branches');
 			$this->template_html = 'emails/customer-invoice-child.php';
 			$this->template_plain = 'emails/plain/customer-invoice-child.php';
 			$this->placeholders = array(
@@ -49,8 +49,26 @@ if (!class_exists('WC_Email_Customer_Invoice_Child', false)) :
 			//add_action('woocommerce_order_status_on-hold_to_processing_notification', array($this, 'trigger'), 10, 2);
 			//add_action('woocommerce_order_status_pending_to_processing_notification', array($this, 'trigger'), 10, 2);
 
+
+			add_filter('woocommerce_email_recipient_customer_invoice_child', [$this, 'so_26429482_add_recipient'], 20, 2);
+
 			// Call parent constructor.
 			parent::__construct();
+		}
+
+		function so_26429482_add_recipient($email, $order)
+		{
+
+			$post_id = $order->get_id();
+
+			if (!empty($order) && !empty($email)) {
+
+				$parent_id = (get_post_meta($post_id, 'parent_id', true)) ? get_post_meta($post_id, 'parent_id', true) : '';
+				$additional_email = get_user_meta($parent_id, 'billing_email', true);
+				$email .= ',' . $additional_email;
+
+			}
+			return $email;
 		}
 
 		/**
@@ -72,7 +90,7 @@ if (!class_exists('WC_Email_Customer_Invoice_Child', false)) :
 		 */
 		public function get_default_heading()
 		{
-			return __('Your {site_title} order has been invoiced',  'woocommerce-branches');
+			return __('Your {site_title} order has been invoiced', 'woocommerce-branches');
 		}
 
 		/**
@@ -139,9 +157,7 @@ if (!class_exists('WC_Email_Customer_Invoice_Child', false)) :
 		 */
 		public function get_content_plain()
 		{
-
-
-			return wc_get_template_html(
+			return wc_get_tsemplate_html(
 				$this->template_plain,
 				array(
 					'order' => $this->object,
@@ -162,7 +178,7 @@ if (!class_exists('WC_Email_Customer_Invoice_Child', false)) :
 		 */
 		public function get_default_additional_content()
 		{
-			return __('Thanks for using {site_url}!',  'woocommerce-branches');
+			return __('Thanks for using {site_url}!', 'woocommerce-branches');
 		}
 	}
 

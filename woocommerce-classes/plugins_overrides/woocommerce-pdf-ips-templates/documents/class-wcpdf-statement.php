@@ -60,13 +60,14 @@ if (!class_exists('\\WPO\\WC\\PDF_Invoices\\Documents\\Statement')) :
 		{
 
 			$user_id = isset($_GET['user_id']) ? $_GET['user_id'] : '';
-			$name = esc_html__('statement',  'woocommerce-pdf-invoices-packing-slips');
-            $suffix = date('Y-m-d'); // 2020-11-11
+			$name = esc_html__('statement', 'woocommerce-pdf-invoices-packing-slips');
+			$suffix = date('Y-m-d'); // 2020-11-11
 
-			$filename = $name . '-user_id_' .$user_id.'-'. $suffix . '.pdf';
 
 			// Filter filename
 			$order_ids = isset($args['order_ids']) ? $args['order_ids'] : array($this->order_id);
+			$filename = $name . '-user_id_' . $user_id . '-' . $suffix . '.pdf';
+
 			$filename = apply_filters('wpo_wcpdf_filename', $filename, $this->get_type(), $order_ids, $context);
 
 			// sanitize filename (after filters to prevent human errors)!
@@ -111,13 +112,23 @@ if (!class_exists('\\WPO\\WC\\PDF_Invoices\\Documents\\Statement')) :
 
 		public function get_orders_list()
 		{
-			$user_id = ($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+			$user_id = $this->get_user_id();
 			return get_orders_list($user_id);
+		}
+
+		public function get_user_id()
+		{
+			$user_id = ($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+			if ($user_id == 0) {
+				$order = wc_get_order($this->order_id);
+				$user_id = (get_post_meta($this->order_id, 'parent_id', true)) ? get_post_meta($this->order_id, 'parent_id', true) : $order->get_user_id();
+			}
+			return $user_id;
 		}
 
 		public function get_user_data()
 		{
-			$user_id = ($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+			$user_id = $this->get_user_id();
 			$customer = [];
 			global $countries;
 			if ($user_id > 0) {
