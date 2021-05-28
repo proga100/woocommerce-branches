@@ -39,4 +39,24 @@ jQuery(document).ready()
         save_paking_products(e);
     });
 
+    function myTimer(pdf_id) {
+        document.getElementById(pdf_id).click(); // Works!
+        console.log(pdf_id);
+    }
+
+    function print_paking_products(e) {
+        let product_ids = {};
+        jQuery('.package_split_exclude').each(function (i, obj) {
+            if (jQuery(obj).prop("checked") == true) {
+                let product_id = jQuery(obj).data('stm_product_id');
+                // jQuery('#print_spdf_'+ product_id).trigger( "click" );
+                if(product_id !='')
+                setInterval(myTimer('print_spdf_' + product_id), 1000);
+            }
+        });
+    }
+
+    jQuery("body").on("click", '.pdf-general', function (e) {
+        print_paking_products(e);
+    });
 }
