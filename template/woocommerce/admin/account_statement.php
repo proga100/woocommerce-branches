@@ -19,6 +19,7 @@
 
 			<?php
 			$nonce = wp_create_nonce('generate_wpo_wcpdf');
+			$send_wpo_wcpdf = wp_create_nonce('send_wpo_wcpdf');
 
 			foreach ($customers as $user) : ?>
 				<?php $customer = new WP_User($user->ID);
@@ -33,7 +34,7 @@
                          href="<?php echo get_admin_url() . 'admin-ajax.php?action=generate_wpo_wcpdf&document_type=statement&_wpnonce=' . $nonce . '&user_id=' . $user->ID; ?>">
                                 <span class="dashicons dashicons-media-interactive"></span> PDF</a></td>
                         <td class="cl-pdf"><a class="btn btn-warning"
-                         href="<?php echo get_admin_url() . 'admin-ajax.php?action=send_wpo_wcpdf&document_type=statement&_wpnonce=' . $nonce . '&user_id=' . $user->ID; ?>">
+                         href="<?php echo get_admin_url() . 'admin-ajax.php?action=send_wpo_wcpdf&document_type=statement&_wpnonce=' . $send_wpo_wcpdf . '&user_id=' . $user->ID; ?>">
                                 <span class="dashicons dashicons-email"></span> Send</a></td>
                     </tr>
 

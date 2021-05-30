@@ -12,8 +12,142 @@ class account_statement_pdf
 		add_action('wp_ajax_nopriv_generate_wpo_wcpdf', array($this, 'generate_pdf_ajax'));
 		//add_filter( 'woocommerce_email_attachments', array( $this, 'attach_pdf_to_email' ), 99, 4 );
 		add_filter('wpo_wcpdf_meta_box_actions', [$this, 'wpo_wcpdf_meta_box_actions'], 10, 2);
+
+		add_action("wp_ajax_send_wpo_wcpdf", [$this, "send_wpo_wcpdf"]);
+
+		add_action('send_scheduled_statement', [$this, 'cron_send_scheduled_statement_c07b7cf4'], 10, 0);
+
 	}
 
+
+	public function cron_send_scheduled_statement_c07b7cf4()
+	{
+		global $account_statements;
+		$request = [];
+		$account_statements->get_request();
+		$customers = $account_statements->get_items($request);
+		$return = [];
+		foreach ($customers as $user) :
+			$total = $account_statements->get_total_order($user->ID);
+			if ($total > 0) {
+				$return[] = $this->cron_mail_send($user->ID, 'statement');
+			}
+		endforeach;
+		wp_send_json($return);
+	}
+
+	public function cron_mail_send($user_id, $document_type)
+	{
+		$return = $this->send_email_attachment($user_id, $document_type);
+		return $return;
+	}
+
+	public function send_email_attachment($user_id, $document_type)
+	{
+		$tmp_path = WPO_WCPDF()->main->get_tmp_path('attachments');
+		try {
+			$document = WPO_WCPDF()->documents->get_document($document_type, $order);
+			if (!$document) {
+				//continue;
+			}
+
+			$filename = $document->get_filename();
+			$pdf_path = $tmp_path . $filename;
+
+			$lock_file = apply_filters('wpo_wcpdf_lock_attachment_file', true);
+
+			// if this file already exists in the temp path, we'll reuse it if it's not older than 60 seconds
+			$max_reuse_age = apply_filters('wpo_wcpdf_reuse_attachment_age', 60);
+			if (file_exists($pdf_path) && $max_reuse_age > 0) {
+				// get last modification date
+				if ($filemtime = filemtime($pdf_path)) {
+					$time_difference = time() - $filemtime;
+					if ($time_difference < $max_reuse_age) {
+						// check if file is still being written to
+						if ($lock_file && $this->wait_for_file_lock($pdf_path) === false) {
+							$attachments[] = $pdf_path;
+							//continue;
+						} else {
+							// make sure this gets logged, but don't abort process
+							wcpdf_log_error("Attachment file locked (reusing: {$pdf_path})", 'critical');
+						}
+					}
+				}
+			}
+
+			// get pdf data & store
+			$pdf_data = $document->get_pdf();
+
+			if ($lock_file) {
+				file_put_contents($pdf_path, $pdf_data, LOCK_EX);
+			} else {
+				file_put_contents($pdf_path, $pdf_data);
+			}
+
+			// wait for file lock
+			if ($lock_file && $this->wait_for_file_lock($pdf_path) === true) {
+				wcpdf_log_error("Attachment file locked ({$pdf_path})", 'critical');
+			}
+
+			$attachments[] = $pdf_path;
+
+			do_action('wpo_wcpdf_email_attachment', $pdf_path, $document_type, $document);
+		} catch (\Exception $e) {
+			wcpdf_log_error($e->getMessage(), 'critical', $e);
+			//continue;
+		} catch (\Dompdf\Exception $e) {
+			wcpdf_log_error('DOMPDF exception: ' . $e->getMessage(), 'critical', $e);
+			//continue;
+		} catch (\Error $e) {
+			wcpdf_log_error($e->getMessage(), 'critical', $e);
+			//continue;
+		}
+
+		$attachments[] = $pdf_path;
+		$return = $this->send_email($attachments, $user_id);
+		return $return;
+	}
+
+	public function send_wpo_wcpdf()
+	{
+		//	ini_set('display_errors', 1);ini_set('display_startup_errors', 1);error_reporting(E_ALL);
+		if (!wp_verify_nonce($_REQUEST['_wpnonce'], "send_wpo_wcpdf")) {
+			exit("No naughty business please");
+		}
+		$user_id = (int)($_GET['user_id']);
+		$document_type = $_REQUEST['document_type'];
+		$return = $this->send_email_attachment($user_id, $document_type);
+		wp_send_json($return);
+	}
+
+	public function send_email($attachments, $user_id)
+	{
+
+		$user_data = get_userdata($user_id);
+		$user_email = $user_data->user_email;
+		$headers = 'From:  Castle Supply Limited <statements@castlesupply.flance.info' . "\r\n";
+		$subject = 'Account Statement for ' . $user_data->last_name . ", " . $user_data->first_name;
+		$message = 'Account Statement for ' . $user_data->last_name . ", " . $user_data->first_name . "\n";
+		$mailResult = wp_mail($user_email, $subject, $message, $headers, $attachments);
+
+		if ($mailResult == true) {
+			$return = array(
+				'message' => 'Send Successfully',
+				'attachments' => $attachments,
+				'email' => $user_email
+			);
+
+		} else {
+			$return = array(
+				'message' => 'Failed',
+				'attachments' => $attachments,
+				'email' => $user_email
+			);
+
+		}
+		return $return;
+
+	}
 
 	public function wpo_wcpdf_meta_box_actions($meta_box_actions, $post_id)
 	{
@@ -22,8 +156,8 @@ class account_statement_pdf
 		$parent_id = (get_post_meta($post_id, 'parent_id', true)) ? get_post_meta($post_id, 'parent_id', true) : $order->get_user_id();
 		foreach ($meta_box_actions as $document_type => $data) {
 			if ($document_type != 'statement') {
-			//	$data['url'] = wp_nonce_url(admin_url("admin-ajax.php?action=generate_wpo_wcpdf&document_type={$document_type}&user_id=" . $parent_id), 'generate_wpo_wcpdf');
-			$meta_box_actions_modified[$document_type] = $data;
+				//	$data['url'] = wp_nonce_url(admin_url("admin-ajax.php?action=generate_wpo_wcpdf&document_type={$document_type}&user_id=" . $parent_id), 'generate_wpo_wcpdf');
+				$meta_box_actions_modified[$document_type] = $data;
 			}
 
 		}

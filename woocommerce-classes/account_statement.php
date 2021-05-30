@@ -162,6 +162,6 @@ if (class_exists('Automattic\WooCommerce\Admin\API\Reports\Customers\Controller'
 
     }
 
-    new AccountStatement();
+    $account_statements = new AccountStatement();
 
 }
