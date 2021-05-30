@@ -41,6 +41,7 @@ if (!class_exists('\\WPO\\WC\\PDF_Invoices\\Documents\\Statement')) :
             add_filter('wpo_wcpdf_document_is_allowed', array($this, 'enable_statement'), 10, 2);
             // Call parent constructor
             parent::__construct($order);
+            
         }
 
         public function enable_statement($allowed, $document)

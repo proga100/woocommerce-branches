@@ -10,7 +10,6 @@ class OrderPackageSplit
 
 	public function __construct()
 	{
-
 		add_action('woocommerce_admin_order_item_headers', [$this, 'woocommerce_admin_order_item_headers']);
 		add_action('woocommerce_admin_order_item_values', [$this, 'woocommerce_admin_order_item_values'], 10, 3);
 
@@ -22,7 +21,82 @@ class OrderPackageSplit
 
 		add_filter('woocommerce_order_get_items', [$this, 'filter_woocommerce_order_get_items'], 15, 2);
 		add_action('add_meta_boxes_shop_order', array($this, 'add_meta_boxes_child'));
-		
+
+		add_action('woocommerce_admin_order_data_after_order_details', [$this, 'sample_after_order_fn']);
+		add_action('woocommerce_process_shop_order_meta', [$this, 'sample_save'], 45, 2);
+
+		add_action('wpo_wcpdf_after_order_data', [$this, 'wpo_wcpdf_after_order_data'], 10, 2);
+
+
+	}
+
+	public function wpo_wcpdf_after_order_data($doc_type, $order)
+	{
+		if ($doc_type == 'invoice') {
+			$date_completed_ts = get_post_meta($order->get_id(), '_date_completed', true); //timestamp
+			$formatted_date = $date_completed_ts ? date('Y-m-d', $date_completed_ts + (get_option('gmt_offset') * HOUR_IN_SECONDS)) : 'Not completed';
+			?>
+            <tr class="payment-method">
+					<th><?php _e( 'Paid Date:', 'woocommerce-pdf-invoices-packing-slips' ); ?></th>
+					<td><?php echo $formatted_date; ?></td>
+			</tr>
+			<?php
+		}
+
+	}
+
+	public function sample_after_order_fn($order)
+	{
+		$date_completed_ts = get_post_meta($order->get_id(), '_date_completed', true); //timestamp
+		$formatted_date = $date_completed_ts ? date('Y-m-d H:i:s', $date_completed_ts + (get_option('gmt_offset') * HOUR_IN_SECONDS)) : 'Not completed';
+		?>
+
+        <br class="clear"/>
+        <h4>Update Date Paid <a href="#" class="edit_address">Edit</a></h4>
+        <div class="address">
+            <p<?php if (empty($date_paid)) echo ' class="none_set"' ?>>
+                <strong>Date Paid:</strong><?php echo $formatted_date; ?>
+            </p>
+        </div>
+        <div class="edit_address">
+		<?php
+		woocommerce_wp_text_input(array(
+				'id' => '_date_paid',
+				'label' => 'Date Paid:',
+				'placeholder' => 'YYYY-MM-DD',
+				'wrapper_class' => 'form-field-wide',
+				'class' => 'date-picker',
+				'style' => 'width: 100%',
+				'description' => 'The day payment was made.'
+			)
+		);
+		?></div><?php
+	}
+
+	public function sample_save($order_id, $post)
+	{
+		$order = wc_get_order($order_id);
+		$newStatus = wc_clean($_POST['order_status']);
+		$oldStatus = wc_clean($_POST['original_post_status']);
+		$newDatePaid = wc_clean($_POST['_date_paid']);
+		$datePaid = $newDatePaid ? $newDatePaid : '';
+
+		// LOAD THE WC LOGGER
+		$logger = wc_get_logger();
+
+		if ($order) {
+			if (in_array($oldStatus, array('wc-on-hold', 'wc-processing', 'wc-completed')) && $newStatus == 'wc-pending') {
+				$order->set_date_paid(null);
+				$order->set_date_completed($null);
+				$logger->info("Status is now pending so set paid date to null", array('source' => 'gk3-testing'));
+			}
+			if ($datePaid && $newStatus !== 'wc-pending') {
+				$order->set_date_paid($newDatePaid);
+				$order->set_date_completed($newDatePaid);
+				$logger->info("set paid date to new date if not pending", array('source' => 'gk3-testing'));
+			}
+			$order->save();
+		}
 	}
 
 	public function stm_packing_products()
@@ -188,7 +262,7 @@ class OrderPackageSplit
 		$packings_id = 0;
 		$products = OrderPackageSplit::get_products($order);
 		$products_packings = (get_post_meta($post->ID, 'products_in_packing_add', true)) ? get_post_meta($post->ID, 'products_in_packing_add', true) : '';
-		$products_packings = (json_decode($products_packings, true)) ? json_decode($products_packings, true): [];
+		$products_packings = (json_decode($products_packings, true)) ? json_decode($products_packings, true) : [];
 		foreach ($documents as $document) {
 			$document_title = $document->get_title();
 			if ($document = wcpdf_get_document($document->get_type(), $order)) {
